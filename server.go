@@ -23,6 +23,8 @@ var (
 	mu      sync.Mutex
 )
 
+var NGROK_TOKEN = "YOUR TOKEN HERE"
+
 
 func main() {
 	// Start ngrok tunnel
@@ -55,7 +57,7 @@ func startNgrok() error {
 	ctx := context.Background()
 	listener, err := ngrok.Listen(ctx,
 		config.TCPEndpoint(),
-		ngrok.WithAuthtoken("2GHNce7XPuOGAd4krgy8FarCIKv_4iSqiaCRm2KnUUm782NHY"),
+		ngrok.WithAuthtoken(NGROK_TOKEN),
 	)
 	if err != nil {
 		return err
