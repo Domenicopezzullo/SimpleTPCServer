@@ -23,8 +23,12 @@ var (
 	mu      sync.Mutex
 )
 
+<<<<<<< HEAD
 var NGROK_TOKEN = "YOUR TOKEN HERE"
 
+=======
+var YOUR_TOKEN = "YOUR_TOKEN_HERE"
+>>>>>>> 825bfed (Fixed some bugs :D)
 
 func main() {
 	// Start ngrok tunnel
@@ -57,7 +61,11 @@ func startNgrok() error {
 	ctx := context.Background()
 	listener, err := ngrok.Listen(ctx,
 		config.TCPEndpoint(),
+<<<<<<< HEAD
 		ngrok.WithAuthtoken(NGROK_TOKEN),
+=======
+		ngrok.WithAuthtoken(YOUR_TOKEN),
+>>>>>>> 825bfed (Fixed some bugs :D)
 	)
 	if err != nil {
 		return err
@@ -104,49 +112,55 @@ func handleConnection(conn net.Conn) {
 	username := strings.TrimSpace(scanner.Text())
 
 	client := &Client{conn: conn, username: username, writer: writer}
-	
+
 	mu.Lock()
 	clients[conn] = client
 	mu.Unlock()
 
-	broadcast(fmt.Sprintf("%s has joined the chat\n", username), client)
+	broadcast(fmt.Sprintf("%s has joined the chat", username), client)
 
 	for {
-		sendPrompt(client)
+		// Display prompt to the user
+		writer.WriteString(fmt.Sprintf("[%s] > ", username))
+		writer.Flush()
+
 		if !scanner.Scan() {
 			break
 		}
-		message := scanner.Text()
-		
+
+		message := strings.TrimSpace(scanner.Text())
+
 		if message != "" {
-			broadcast(fmt.Sprintf("%s\n", message), client)
+			broadcast(message, client) // Broadcasting only the message
 		}
 	}
 
 	mu.Lock()
 	delete(clients, conn)
 	mu.Unlock()
-	
-	broadcast(fmt.Sprintf("%s has left the chat\n", username), client)
+
+	broadcast(fmt.Sprintf("%s has left the chat", username), client)
 }
 
 func broadcast(message string, sender *Client) {
 	formattedMsg := fmt.Sprintf("[%s] %s", sender.username, message)
-	
+
 	mu.Lock()
 	defer mu.Unlock()
-	
+
+	// Broadcast to all clients except the sender
 	for _, client := range clients {
 		if client != sender {
-			client.writer.WriteString("\r\n" + formattedMsg)
+			// Clear the current prompt line before displaying the message
+			client.writer.WriteString("\r") // Carriage return to clear prompt
+			client.writer.WriteString("\033[K") // ANSI escape code to clear the line
+			client.writer.WriteString(formattedMsg + "\n") // Broadcast the message
 			client.writer.Flush()
-			sendPrompt(client)
+
+			// Re-display prompt for each client after displaying the message
+			client.writer.WriteString(fmt.Sprintf("[%s] > ", client.username)) // Display the prompt again
+			client.writer.Flush()
 		}
 	}
 }
 
-func sendPrompt(client *Client) {
-	prompt := fmt.Sprintf("[%s] > ", client.username)
-	client.writer.WriteString("\r" + prompt)
-	client.writer.Flush()
-}
